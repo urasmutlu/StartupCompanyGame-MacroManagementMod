@@ -6,6 +6,8 @@ function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
 }
 
+const debug = str => Helpers.ConsoleInfo(`[MOD] Macro-Management Mod: ${str}`);
+
 exports.initialize = (modPath) => {
     _modPath = modPath;
 
@@ -17,6 +19,8 @@ exports.initialize = (modPath) => {
         faIcon: 'fa fa-cubes',
         badgeCount: 0,
     });
+
+    debug('Loaded Macro-Management Mod');
 
     // Define custom views
     exports.views = [
@@ -500,4 +504,24 @@ exports.onLoadGame = settings => {
 
 exports.onUnsubscribe = done => {
 
+    //Restores everything to prepare for unsubscription from Steam Workshop
+    const re = /^sg_.*json$/;
+
+    delete GetRootScope().settings.MacroManagementMod;
+    GetRootScope().saveGame();
+    debug('Deleted \'$rootscope.settings.MacroManagementMod\'.');
+
+    Remote.app.getAllFiles(files => {
+
+        const savegames = files.filter(file => re.test(file));
+
+        savegames.forEach((file, index) => Helpers.LoadSettings(file, settings => {
+            delete settings.MacroManagementMod;
+            Remote.app.saveFile(file, JSON.stringify(settings));
+
+            if (index === savegames.length - 1) {
+                done();
+            }
+        }));
+    });
 };

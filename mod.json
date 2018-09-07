@@ -1,6 +1,5 @@
 {
     "name": "Macro-Management Mod",
     "author": "littlewing",
-    "description": "Macro-management of the features and components",
-    "imageUrl": ""
+    "description": "Macro-management of the features and components             To use the mode, you should have managers and at least one designer, developer, or lead developer working under these managers. You can choose to upgrade any feature of your product by clicking the plus button. Then every employee working under your managers will start to create components to improve that feature.          Or you can choose to create or not create individual components from the components tab."
 }
