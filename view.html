@@ -1,0 +1,91 @@
+<style>
+.padding-top {
+padding-top:30px!important;
+}
+h4 {
+margin-top:0;
+}
+p {
+font-size:12px;
+}
+</style>
+
+<h1><i class="fa fa-cubes"></i> Macro-Management Mod <i class="fa fa-times pull-right close-button" close-all-ui></i>
+</h1>
+
+<ul class="tab-list" style="display: inline-block; margin-bottom: 0;">
+    <li ng-repeat="product in mmmodCtrl.getCompanyProducts()" role="tab" data-toggle="tab" ng-class="{ active: mmmodCtrl.tab == product.name }"
+    ng-click="mmmodCtrl.tab = product.name">{{ product.name }}
+    </li>
+
+    <li role="tab" data-toggle="tab" ng-class="{ active: mmmodCtrl.tab == 'components' }"
+        ng-click="mmmodCtrl.tab = 'components'">Components
+    </li>
+</ul>
+
+<div ng-repeat="product in mmmodCtrl.getCompanyProducts()" ng-If="mmmodCtrl.tab == product.name">
+
+<div class="padding">
+<div class="flex1" style="height: 490px;overflow-y:auto;">
+
+<table>
+<tr>
+<td><b>Features</b></td>
+<td><b>Level</b></td>
+<td><b>Start/Stop</b></td>
+</tr>
+<tr ng-repeat="feature in mmmodCtrl.getFeaturesByProductName(mmmodCtrl.tab)">
+    <td>{{ feature.featureName }}</td>
+    <td>{{ feature.quality.current }}&nbsp;</td>
+    <td>
+	<button class="small"  uib-tooltip="Start working" tooltip-append-to-body="true" ng-if="mmmodCtrl.isMaxProd(feature) == false"
+            ng-click="mmmodCtrl.maxFeature(feature)"><i class="fa fa-plus"></i></button>&nbsp;
+    <button class="small red"  uib-tooltip="Stop working" tooltip-append-to-body="true" ng-if="mmmodCtrl.isMaxProd(feature) == true"
+            ng-click="mmmodCtrl.minFeature(feature)"><i class="fa fa-minus"></i></button>&nbsp;
+    </td>
+</tr>
+<tr></tr>
+</table>
+
+</div>
+</div>
+
+</div>
+
+<div ng-If="mmmodCtrl.tab == 'components'">
+
+    <div class="padding">
+        <div class="flex1" style="height: 490px;overflow-y:auto;">
+
+            <table>
+                <tr>
+                    <td></td>
+                    <td><b>Inventory</b></td>
+                    <td><b>Researched</b></td>
+                    <td><b>Start/Stop</b></td>
+                </tr>
+                <tr ng-repeat="component in mmmodCtrl.componentList('Component')">
+                    <td><img uib-tooltip="{{ component.name }}" tooltip-append-to-body="true" ng-src="{{ component.icon }}"></td>
+                    <td>{{ component.inventory }}</td>
+                    <td>( {{ component.researched }} / {{ component.totalDevsPossible }} )&nbsp;
+                        <button ng-If="component.researched < component.totalDevsPossible" class="small" uib-tooltip="Research"
+                                tooltip-append-to-body="true" ng-click="mmmodCtrl.researchComponent(component.name);"><i class="fa fa-flask"></i></button>
+                    </td>
+                    <!--
+                    <td>Volume here</td>
+                    -->
+                    <td>{{ component.working }}&nbsp;
+                        <button class="small" ng-if="component.researched > component.working && mmmodCtrl.isMaxProdComponent(component.name) == false" uib-tooltip="Start working"
+                                tooltip-append-to-body="true" ng-click="mmmodCtrl.maxProduction(component.name)"><i class="fa fa-plus"></i></button>&nbsp;
+                        <button class="small red" ng-if="component.working <= component.researched && mmmodCtrl.isMaxProdComponent(component.name) == true" uib-tooltip="Stop working"
+                                tooltip-append-to-body="true" ng-click="mmmodCtrl.minProduction(component.name)"><i class="fa fa-minus"></i></button>&nbsp;
+                    </td>
+                </tr>
+                <tr></tr>
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
