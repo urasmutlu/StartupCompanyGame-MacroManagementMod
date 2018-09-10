@@ -2,6 +2,15 @@ let _modPath;
 
 // TODO: (Maybe in later versions) Manager counts and feature sharing
 
+function Team(teamId, name, members, status){
+
+    this.teamId = teamId;
+    this.teamName = name;
+    this.members = members;
+    this.status = status;
+
+}
+
 function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
 }
@@ -36,7 +45,12 @@ exports.initialize = (modPath) => {
                 };
 
                 this.productList = this.getCompanyProducts();
-                this.tab = this.productList[0].name;
+                if(this.productList.length < 1){
+                    this.tab = 'components';
+                }
+                else{
+                    this.tab = this.productList[0].name;
+                }
 
                 if($rootScope.settings.hasOwnProperty("MacroManagementMod")) {
                     this.featureList = $rootScope.settings.MacroManagementMod["featureList"];
@@ -83,13 +97,32 @@ exports.initialize = (modPath) => {
 
                 this.updateFeatureList = function(){
 
-                    for(var i = 0; i < this.productList.length; i++){
+                    // clean up if there are missing products
+                    if(Object.getOwnPropertyNames(this.featureList).length > this.productList.length){
 
+                        var featureListKeys = Object.getOwnPropertyNames(this.featureList);
+                        for(var i = 0; i < featureListKeys.length; i++){
+                            if(!this.productList.map(x => x.name).includes(featureListKeys[i]) || this.productList.length === 0){
+                                delete this.featureList[featureListKeys[i]];
+                            }
+                        }
+                    }
+
+                    for(i = 0; i < this.productList.length; i++){
+
+                        // if(this.productList)
                         var actualFeatures = this.getFeaturesByProductName(this.productList[i].name);
+                        // a new product is added, its feature list will be empty (null at first)
+                        if(this.featureList[this.productList[i].name] == null){
+                            this.featureList[this.productList[i].name] = [];
+                        }
                         var savedFeatures = this.featureList[this.productList[i].name];
 
                         var actualFeatureNames = actualFeatures.map(a => a.featureName);
-                        var savedFeatureNames = savedFeatures.map(a => a.featureName);
+                        var savedFeatureNames = [];
+                        if(savedFeatures.length > 0){
+                            savedFeatureNames = savedFeatures.map(a => a.featureName);
+                        }
 
                         let difference1 = actualFeatureNames.filter(x => !savedFeatureNames.includes(x));
                         let difference2 = savedFeatureNames.filter(x => !actualFeatureNames.includes(x));
@@ -109,6 +142,7 @@ exports.initialize = (modPath) => {
                             for(j = 0; j < difference2.length; j++){
 
                                 var oldFeature = savedFeatures.find(x => x.featureName === difference2[j]);
+                                console.log(oldFeature);
                                 var index = this.featureList[this.productList[i].name].indexOf(oldFeature);
                                 this.featureList[this.productList[i].name].splice(index, 1);
                             }
@@ -202,13 +236,10 @@ exports.initialize = (modPath) => {
                 };
 
                 this.getEmployeeById = function (id) {
+
                     var Employees = $rootScope.Helpers.GetAllEmployees();
-                    for (var i = 0; i < Employees.length; i++) {
-                        var Employee = Employees[i];
-                        if (Employee.id === id) {
-                            return Employee;
-                        }
-                    }
+                    return Employees[Employees.findIndex(x => x.id === id)]
+
                 };
 
                 this.getAllEmployees = function () {
@@ -492,6 +523,132 @@ exports.initialize = (modPath) => {
                             this.featureList[this.tab][i].maxProd = false
                         }
                     }
+                };
+
+                // TEAM FUNCTIONALITY
+
+                // Load teams from save if it exists
+                if($rootScope.settings.hasOwnProperty("MacroManagementMod")) {
+                    if($rootScope.settings.MacroManagementMod.hasOwnProperty("teams")){
+                        this.teams = $rootScope.settings.MacroManagementMod["teams"];
+                    }
+                }
+
+                // create teams object for the first time
+                // TODO: What if new employees are hired or some are fired? Employees / Managers ?
+                // TODO: Changing employees working under the manager (production must be refreshed?)
+                if(this.teams == null){
+                    this.teams = [];
+                }
+
+                this.selectedManagers = [];
+                this.tempTeamName = "";
+                // for editing a team
+                this.selectedTeam = null;
+
+                this.getAllManagers = function(){
+
+                    var allManagers = this.getEmployeesByType("Manager");
+                    allManagers.map(x => x.numOfDevs = this.getManagerEmployeeCountByType(x, "Developer"));
+                    allManagers.map(x => x.numOfLeadDevs = this.getManagerEmployeeCountByType(x, "LeadDeveloper"));
+                    allManagers.map(x => x.numOfDesigners = this.getManagerEmployeeCountByType(x, "Designer"));
+                    allManagers = allManagers.filter(x => this.getManagerEmployeeCount(x) > 0);
+
+                    return allManagers
+                };
+
+                this.getManagerEmployeeCountByType = function(manager, type){
+
+                    var managerEmployees = manager.employees.map(x => this.getEmployeeById(x));
+                    return managerEmployees.filter(x => x.employeeTypeName === type).length
+
+                };
+
+                this.getManagerEmployeeCount = function(manager){
+
+                    var managerEmployees = manager.employees.map(x => this.getEmployeeById(x));
+                    managerEmployees = managerEmployees.filter(x => x.employeeTypeName === 'Designer' ||
+                                                                x.employeeTypeName === 'LeadDeveloper' ||
+                                                                x.employeeTypeName === 'Developer');
+                    return managerEmployees.length
+
+                };
+
+                this.isManagerInATeam = function(manager){
+
+                    var allManagersInTeams = [].concat.apply([], this.teams.map(x => x.members));
+                    return allManagersInTeams.map(x => x.id).includes(manager.id)
+
+                };
+
+                this.getManagersByTeam = function (team) {
+
+                    return this.teams[this.teams.findIndex(x => x.teamName === team.teamName)].members;
+
+                };
+
+                this.getNumberOfEmployeesInTeamByType = function(teamEmployees, type){
+
+                    var allEmployeesOfManagers = [].concat.apply([], teamEmployees.map(x => x.employees));
+                    allEmployeesOfManagers = allEmployeesOfManagers.map(x => this.getEmployeeById(x));
+                    return allEmployeesOfManagers.filter(x => x.employeeTypeName === type).length;
+
+                };
+
+                this.removeSelectedManagerFromTeam = function(manager, team){
+
+                    var managerIndex = team.members.findIndex(x => x.id === manager.id);
+                    team.members.splice(managerIndex, 1);
+
+                    this.teams[this.teams.findIndex(x => x.teamName === team.teamName)] = team;
+                    $rootScope.settings.MacroManagementMod["teams"] = this.teams;
+
+                };
+
+                this.addSelectedManagerToTeam = function(manager, team){
+
+                    team.members.push(manager);
+
+                    this.teams[this.teams.findIndex(x => x.teamName === team.teamName)] = team;
+                    $rootScope.settings.MacroManagementMod["teams"] = this.teams;
+
+                };
+
+                this.addOrRemoveSelectedManagers = function(employee){
+
+                    if(this.selectedManagers.map(x => x.id).includes(employee.id)){
+                        var index = this.selectedManagers.findIndex(x => x.id === employee.id);
+                        this.selectedManagers.splice(index, 1);
+                    }
+                    else{
+                        this.selectedManagers.push(employee);
+                    }
+                };
+
+                this.isManagerSelected = function(manager){
+
+                    if(this.selectedManagers.length > 0){
+                        return this.selectedManagers.map(x => x.name).includes(manager.name);
+                    }
+                    return false;
+                };
+
+                this.addTeam = function(){
+
+                    var team = new Team(this.teams.length + 1, this.tempTeamName, this.selectedManagers, 0);
+                    this.teams.push(team);
+                    $rootScope.settings.MacroManagementMod["teams"] = this.teams;
+                    this.selectedManagers = [];
+                    this.tempTeamName = "";
+                    this.tab = 'teams';
+
+                };
+
+                this.removeTeam = function(team){
+
+                    this.teams.splice(this.teams.findIndex(x => x.teamId === team.teamId), 1);
+                    $rootScope.settings.MacroManagementMod["teams"] = this.teams;
+
                 };
             }
         },

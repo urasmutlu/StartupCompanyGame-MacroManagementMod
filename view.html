@@ -21,6 +21,10 @@ font-size:12px;
     <li role="tab" data-toggle="tab" ng-class="{ active: mmmodCtrl.tab == 'components' }"
         ng-click="mmmodCtrl.tab = 'components'">Components
     </li>
+
+    <li role="tab" data-toggle="tab" ng-class="{ active: mmmodCtrl.tab == 'teams' }"
+        ng-click="mmmodCtrl.tab = 'teams'">Teams
+    </li>
 </ul>
 
 <div ng-repeat="product in mmmodCtrl.getCompanyProducts()" ng-If="mmmodCtrl.tab == product.name">
@@ -89,3 +93,187 @@ font-size:12px;
 
 </div>
 
+<div ng-If="mmmodCtrl.tab == 'teams'">
+
+    <div class="padding">
+        <div class="flex1" style="height: 490px;overflow-y:auto;">
+
+            <table ng-if="mmmodCtrl.teams.length > 0">
+                <tr>
+                    <td><b>Team Name</b></td>
+                    <td><b>Manager Count</b></td>
+                    <td><b>Status</b></td>
+                    <td><b>Edit/Delete</b></td>
+                </tr>
+                <tr ng-repeat="team in mmmodCtrl.teams">
+                    <td>{{ team.teamName }}</td>
+                    <td>{{ team.members.length }} &nbsp;</td>
+                    <td ng-if="team.status == 0"> Idle&nbsp;</td>
+                    <td ng-if="team.status == 1"> Working&nbsp;</td>
+                    <td>
+                        <button class="small" uib-tooltip="Edit team"
+                                tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'edit_team'; mmmodCtrl.selectedTeam = team"><i class="fa fa-edit"></i></button>&nbsp;
+                        <button class="small red" uib-tooltip="Delete team"
+                                tooltip-append-to-body="true" ng-click="mmmodCtrl.removeTeam(team)"><i class="fa fa-trash"></i></button>&nbsp;
+                    </td>
+                </tr>
+                <tr></tr>
+            </table>
+
+            <div ng-if="mmmodCtrl.teams.length == 0">
+                You don't have any teams right now.
+            </div>
+
+            <div class="padding">
+
+            </div>
+
+            <button class="medium" uib-tooltip="Create a new team"
+                    tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'create_team'">Create New Team
+            </button>
+
+        </div>
+    </div>
+
+</div>
+
+<div ng-If="mmmodCtrl.tab == 'create_team'">
+
+    <div class="padding">
+        <div class="flex1" style="height: 490px;overflow-y:auto;">
+            <div style="float: right" >
+                <button class="small red" uib-tooltip="Go back to teams"
+                        tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'teams'">Back</button>&nbsp;
+            </div>
+
+            Team Name: <input type="text" maxlength="20" ng-model="mmmodCtrl.tempTeamName" size="2" style="width: 300px" >
+            <br>
+            <br>
+            Number of developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "Developer") }}
+            <br>
+            Number of lead developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "LeadDeveloper") }}
+            <br>
+            Number of designers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "Designer") }}
+            <br>
+            <br>
+            <b>Available Managers:</b>
+            <br>
+            <br>
+            <table>
+                <tr>
+                    <td><b>Manager Name</b></td>
+                    <td><b>Developers</b></td>
+                    <td><b>Lead Developers</b></td>
+                    <td><b>Designers</b></td>
+                    <td><b>Assign</b></td>
+                </tr>
+                <tr ng-repeat="manager in mmmodCtrl.getAllManagers()" ng-if="mmmodCtrl.getManagerEmployeeCount(manager) > 0 && !mmmodCtrl.isManagerInATeam(manager)">
+                    <td>{{ manager.name }}</td>
+                    <td>{{ manager.numOfDevs }}</td>
+                    <td>{{ manager.numOfLeadDevs }}</td>
+                    <td>{{ manager.numOfDesigners }}</td>
+                    <td>
+                        <div class="toggle-switch"
+                             ng-class="{ active: mmmodCtrl.isManagerSelected(manager) }"
+                             ng-click="mmmodCtrl.addOrRemoveSelectedManagers(manager)">
+                            <span></span>
+                        </div>
+                    </td>
+                </tr>
+                <tr></tr>
+            </table>
+
+            <div class="padding">
+
+            </div>
+
+            <button class="medium" uib-tooltip="Create"
+                    tooltip-append-to-body="true" ng-click="mmmodCtrl.addTeam()">Create
+            </button>
+
+        </div>
+    </div>
+
+</div>
+
+<div ng-If="mmmodCtrl.tab == 'edit_team'">
+
+    <div class="padding">
+        <div class="flex1" style="height: 490px;overflow-y:auto;">
+            <div style="float: right" >
+                <button class="small red" uib-tooltip="Go back to teams"
+                        tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'teams'">Back</button>&nbsp;
+            </div>
+
+            Team Name: <input type="text" maxlength="20" ng-model="mmmodCtrl.selectedTeam.teamName" size="2" style="width: 300px" >
+            <br>
+            <br>
+            Number of developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Developer") }}
+            <br>
+            Number of lead developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "LeadDeveloper") }}
+            <br>
+            Number of designers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Designer") }}
+            <br>
+            <br>
+            <b>Current Managers:</b>
+            <br>
+            <br>
+            <table>
+                <tr>
+                    <td><b>Manager Name</b></td>
+                    <td><b>Developers</b></td>
+                    <td><b>Lead Developers</b></td>
+                    <td><b>Designers</b></td>
+                    <td><b>Assign</b></td>
+                </tr>
+                <tr ng-repeat="manager in mmmodCtrl.getManagersByTeam(mmmodCtrl.selectedTeam)">
+                    <td>{{ manager.name }}</td>
+                    <td>{{ manager.numOfDevs }}</td>
+                    <td>{{ manager.numOfLeadDevs }}</td>
+                    <td>{{ manager.numOfDesigners }}</td>
+                    <td>
+                        <div class="toggle-switch"
+                             ng-class="{ active: mmmodCtrl.isManagerInATeam(manager) }"
+                             ng-click="mmmodCtrl.removeSelectedManagerFromTeam(manager, mmmodCtrl.selectedTeam)">
+                            <span></span>
+                        </div>
+                    </td>
+                </tr>
+                <tr></tr>
+            </table>
+            <div ng-if="mmmodCtrl.selectedTeam.members.length == 0">
+                <br>
+                You haven't assigned any managers to your team!
+            </div>
+            <br>
+            <br>
+            <b>Available Managers:</b>
+            <br>
+            <br>
+            <table>
+                <tr>
+                    <td><b>Manager Name</b></td>
+                    <td><b>Developers</b></td>
+                    <td><b>Lead Developers</b></td>
+                    <td><b>Designers</b></td>
+                    <td><b>Assign</b></td>
+                </tr>
+                <tr ng-repeat="manager in mmmodCtrl.getAllManagers()" ng-if="mmmodCtrl.getManagerEmployeeCount(manager) > 0 && !mmmodCtrl.isManagerInATeam(manager)">
+                    <td>{{ manager.name }}</td>
+                    <td>{{ manager.numOfDevs }}</td>
+                    <td>{{ manager.numOfLeadDevs }}</td>
+                    <td>{{ manager.numOfDesigners }}</td>
+                    <td>
+                        <div class="toggle-switch"
+                             ng-class="{ active: mmmodCtrl.isManagerSelected(manager) }"
+                             ng-click="mmmodCtrl.addSelectedManagerToTeam(manager, mmmodCtrl.selectedTeam)">
+                            <span></span>
+                        </div>
+                    </td>
+                </tr>
+                <tr></tr>
+            </table>
+        </div>
+    </div>
+
+</div>
