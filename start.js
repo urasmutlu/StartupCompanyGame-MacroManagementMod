@@ -2,12 +2,13 @@ let _modPath;
 
 // TODO: (Maybe in later versions) Manager counts and feature sharing
 
-function Team(teamId, name, members, status){
+function Team(teamId, name, members, status, assignedFeatures){
 
     this.teamId = teamId;
     this.teamName = name;
     this.members = members;
     this.status = status;
+    this.assignedFeatures = assignedFeatures;
 
 }
 
@@ -25,7 +26,7 @@ exports.initialize = (modPath) => {
         name: 'mmmod',
         tooltip: "Macro-Management Mod",
         tooltipPosition: 'top',
-        faIcon: 'fa fa-cubes',
+        faIcon: 'fa fa-black-tie',
         badgeCount: 0,
     });
 
@@ -468,7 +469,14 @@ exports.initialize = (modPath) => {
                     return requirementNames.filter(onlyUnique);
                 };
 
-                this.maxFeature = function(feature){
+                this.maxFeature = function(product, feature, featureIndex){
+
+                    // TODO: In progress
+                    //if a team is assigned, find team members (managers) and maxProduction the requirements with ONLY those team members
+                    if(this.featureList[product.name][featureIndex].assignedTeam != null){
+                        var assignedTeam = this.featureList[product.name][featureIndex].assignedTeam;
+                    }
+                    //if a team is not assigned, find managers WITHOUT any assigned team, maxProduction the requirements with ONLY those managers
 
                     var requirementNames = this.getRequirementsByFeature(feature);
 
@@ -535,7 +543,7 @@ exports.initialize = (modPath) => {
                 }
 
                 // create teams object for the first time
-                // TODO: What if new employees are hired or some are fired? Employees / Managers ?
+                // TODO: What if new employees are hired or some are fired? Employees (no problem if not manager?) / Managers ? (this.refreshTeamMembers?)
                 // TODO: Changing employees working under the manager (production must be refreshed?)
                 if(this.teams == null){
                     this.teams = [];
@@ -543,8 +551,9 @@ exports.initialize = (modPath) => {
 
                 this.selectedManagers = [];
                 this.tempTeamName = "";
-                // for editing a team
+                // for editing and assigning a team
                 this.selectedTeam = null;
+                this.selectedTeamSet = {};
 
                 this.getAllManagers = function(){
 
@@ -572,6 +581,60 @@ exports.initialize = (modPath) => {
                                                                 x.employeeTypeName === 'Developer');
                     return managerEmployees.length
 
+                };
+
+                this.getProductById = function(id){
+
+                    var products = this.getCompanyProducts();
+                    return products.find(x => x.id === id);
+
+                };
+
+                this.updateAssignedFeaturesWithEditedTeamName = function(){
+
+                    var assignedFeatures = this.selectedTeam.assignedFeatures;
+                    var assignedFeatureProducts = assignedFeatures.map(x => this.getProductById(x.productId).name);
+
+                    for (var i = 0; i < assignedFeatures.length; i++){
+
+                        var index = this.featureList[assignedFeatureProducts[i]].findIndex(x => x.id === assignedFeatures[i].id);
+                        if(index !== -1){
+                            this.featureList[assignedFeatureProducts[i]][index].assignedTeam = this.selectedTeam;
+                        }
+                    }
+
+                    $rootScope.settings.MacroManagementMod["featureList"] = this.featureList;
+                };
+
+                this.clearAssignedFeatureFromTeamAndFeatureList = function(product, featureIndex){
+
+                    var team = this.featureList[product.name][featureIndex].assignedTeam;
+                    var feature = this.featureList[product.name][featureIndex];
+
+                    //clear feature from team in teams
+                    var teamIndex = this.teams.findIndex(x => x.teamName === team.teamName);
+                    var featIndex = this.teams[teamIndex].assignedFeatures.findIndex(x => x.id === feature.id);
+                    this.teams[teamIndex].assignedFeatures.splice(featIndex, 1);
+
+                    //clear team from feature in featureList
+                    this.featureList[product.name][featureIndex].assignedTeam = null;
+                    $rootScope.settings.MacroManagementMod["featureList"] = this.featureList;
+                    $rootScope.settings.MacroManagementMod["teams"] = this.teams;
+                };
+
+                this.clearAssignedFeaturesOfRemovedTeam = function(team){
+
+                    var assignedFeatures = team.assignedFeatures;
+                    var assignedFeatureProducts = assignedFeatures.map(x => this.getProductById(x.productId).name);
+
+                    for (var i = 0; i < assignedFeatures.length; i++){
+
+                        var index = this.featureList[assignedFeatureProducts[i]].findIndex(x => x.id === assignedFeatures[i].id);
+                        if(index !== -1){
+                            this.featureList[assignedFeatureProducts[i]][index].assignedTeam = null;
+                        }
+                    }
+                    $rootScope.settings.MacroManagementMod["featureList"] = this.featureList;
                 };
 
                 this.isManagerInATeam = function(manager){
@@ -635,7 +698,7 @@ exports.initialize = (modPath) => {
 
                 this.addTeam = function(){
 
-                    var team = new Team(this.teams.length + 1, this.tempTeamName, this.selectedManagers, 0);
+                    var team = new Team(this.teams.length + 1, this.tempTeamName, this.selectedManagers, 0, []);
                     this.teams.push(team);
                     $rootScope.settings.MacroManagementMod["teams"] = this.teams;
                     this.selectedManagers = [];
@@ -645,10 +708,62 @@ exports.initialize = (modPath) => {
                 };
 
                 this.removeTeam = function(team){
-
+                    this.clearAssignedFeaturesOfRemovedTeam(team);
                     this.teams.splice(this.teams.findIndex(x => x.teamId === team.teamId), 1);
                     $rootScope.settings.MacroManagementMod["teams"] = this.teams;
 
+                };
+
+                this.getTeamByAssignedFeature = function(feature){
+
+                    var featuresByTeams = this.teams.map(x => x.assignedFeatures);
+                    var teamIndex = -1;
+
+                    for(var i = 0; i < featuresByTeams.length; i++){
+
+                        if(featuresByTeams[i].findIndex(x => x.id === feature.id) !== -1){
+                            teamIndex = i;
+                            break;
+                        }
+                    }
+
+                    if(teamIndex === -1){
+                        return null;
+                    }
+
+                    return this.teams[teamIndex];
+                };
+
+                this.getTeamIndexByAssignedFeature = function(feature){
+
+                    var featuresByTeams = this.teams.map(x => x.assignedFeatures);
+                    var teamIndex = -1;
+
+                    for(var i = 0; i < featuresByTeams.length; i++){
+
+                        if(featuresByTeams[i].findIndex(x => x.id === feature.id) !== -1){
+                            teamIndex = i;
+                            break;
+                        }
+                    }
+
+                    return teamIndex;
+                };
+
+                this.assignFeatureToTeam = function(product, feature, team, selectedFeatureIndex){
+
+                    // if the feature is assigned to another team, it needs to be unassigned:
+                    var previousTeamIndex = this.getTeamIndexByAssignedFeature(feature);
+                    if(previousTeamIndex !== -1){
+                        var featureIndex = this.teams[previousTeamIndex].assignedFeatures.findIndex(x => x.id === feature.id);
+                        this.teams[previousTeamIndex].assignedFeatures.splice(featureIndex, 1);
+                    }
+
+                    this.teams[this.teams.findIndex(x => x.teamId === team.teamId)].assignedFeatures.push(feature);
+                    $rootScope.settings.MacroManagementMod["teams"] = this.teams;
+
+                    this.featureList[product.name][selectedFeatureIndex].assignedTeam = team;
+                    $rootScope.settings.MacroManagementMod["featureList"] = this.featureList;
                 };
             }
         },

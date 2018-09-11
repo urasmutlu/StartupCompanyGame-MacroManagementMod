@@ -10,7 +10,7 @@ font-size:12px;
 }
 </style>
 
-<h1><i class="fa fa-cubes"></i> Macro-Management Mod <i class="fa fa-times pull-right close-button" close-all-ui></i>
+<h1><i class="fa fa-black-tie"></i> Macro-Management Mod <i class="fa fa-times pull-right close-button" close-all-ui></i>
 </h1>
 
 <ul class="tab-list" style="display: inline-block; margin-bottom: 0;">
@@ -36,14 +36,26 @@ font-size:12px;
 <tr>
 <td><b>Features</b></td>
 <td><b>Level</b></td>
+<td><b>Assign to Team</b></td>
+    <td></td>
 <td><b>Start/Stop</b></td>
 </tr>
 <tr ng-repeat="feature in mmmodCtrl.getFeaturesByProductName(mmmodCtrl.tab)">
     <td>{{ feature.featureName }}</td>
     <td>{{ feature.quality.current }}&nbsp;</td>
+    <td><div dropdown-select="mmmodCtrl.teams"
+             dropdown-model="mmmodCtrl.featureList[product.name][$index].assignedTeam"
+             dropdown-onchange="mmmodCtrl.assignFeatureToTeam(product, feature, selected, $index)"
+             dropdown-item-label="teamName" style="width: 95%">
+    </div>
+    </td>
+    <td>
+        <button class="small red"  uib-tooltip="Unassign from team" tooltip-append-to-body="true" ng-if="mmmodCtrl.featureList[product.name][$index].assignedTeam != null"
+                ng-click="mmmodCtrl.clearAssignedFeatureFromTeamAndFeatureList(product, $index)"><i class="fa fa-ban"></i></button>&nbsp;
+    </td>
     <td>
 	<button class="small"  uib-tooltip="Start working" tooltip-append-to-body="true" ng-if="mmmodCtrl.isMaxProd(feature) == false"
-            ng-click="mmmodCtrl.maxFeature(feature)"><i class="fa fa-plus"></i></button>&nbsp;
+            ng-click="mmmodCtrl.maxFeature(product, feature, $index)"><i class="fa fa-plus"></i></button>&nbsp;
     <button class="small red"  uib-tooltip="Stop working" tooltip-append-to-body="true" ng-if="mmmodCtrl.isMaxProd(feature) == true"
             ng-click="mmmodCtrl.minFeature(feature)"><i class="fa fa-minus"></i></button>&nbsp;
     </td>
@@ -205,7 +217,8 @@ font-size:12px;
                         tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'teams'">Back</button>&nbsp;
             </div>
 
-            Team Name: <input type="text" maxlength="20" ng-model="mmmodCtrl.selectedTeam.teamName" size="2" style="width: 300px" >
+            Team Name: <input type="text" maxlength="20" ng-model="mmmodCtrl.selectedTeam.teamName"
+                              ng-change="mmmodCtrl.updateAssignedFeaturesWithEditedTeamName()" size="2" style="width: 300px" >
             <br>
             <br>
             Number of developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Developer") }}
