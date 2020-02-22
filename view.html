@@ -32,6 +32,11 @@ font-size:12px;
 <div class="padding">
 <div class="flex1" style="height: 490px;overflow-y:auto;">
 
+    <i>If you assign teams to features, only the members of the assigned team will work on the components
+    to improve that feature. If you don't assign teams, features will be improved by the managers <u>who
+            are not in any team.</u></i>
+    <br>
+    <br>
 <table>
 <tr>
 <td><b>Features</b></td>
@@ -46,18 +51,20 @@ font-size:12px;
     <td><div dropdown-select="mmmodCtrl.teams"
              dropdown-model="mmmodCtrl.featureList[product.name][$index].assignedTeam"
              dropdown-onchange="mmmodCtrl.assignFeatureToTeam(product, feature, selected, $index)"
-             dropdown-item-label="teamName" style="width: 95%">
+             dropdown-item-label="teamName"
+             dropdown-disabled="mmmodCtrl.featureList[product.name][$index].maxProd" style="width: 95%">
     </div>
     </td>
     <td>
         <button class="small red"  uib-tooltip="Unassign from team" tooltip-append-to-body="true" ng-if="mmmodCtrl.featureList[product.name][$index].assignedTeam != null"
-                ng-click="mmmodCtrl.clearAssignedFeatureFromTeamAndFeatureList(product, $index)"><i class="fa fa-ban"></i></button>&nbsp;
+                ng-click="mmmodCtrl.clearAssignedFeatureFromTeamAndFeatureList(product, $index)"
+                ng-disabled="mmmodCtrl.featureList[product.name][$index].maxProd"><i class="fa fa-ban"></i></button>&nbsp;
     </td>
     <td>
-	<button class="small"  uib-tooltip="Start working" tooltip-append-to-body="true" ng-if="mmmodCtrl.isMaxProd(feature) == false"
+	<button class="small"  uib-tooltip="Start working" tooltip-append-to-body="true" ng-disabled="mmmodCtrl.isMaxProd($index) == true"
             ng-click="mmmodCtrl.maxFeature(product, feature, $index)"><i class="fa fa-plus"></i></button>&nbsp;
-    <button class="small red"  uib-tooltip="Stop working" tooltip-append-to-body="true" ng-if="mmmodCtrl.isMaxProd(feature) == true"
-            ng-click="mmmodCtrl.minFeature(feature)"><i class="fa fa-minus"></i></button>&nbsp;
+    <button class="small red"  uib-tooltip="Stop working" tooltip-append-to-body="true" ng-disabled="mmmodCtrl.isMaxProd($index) == false"
+            ng-click="mmmodCtrl.minFeature(product, feature, $index)"><i class="fa fa-minus"></i></button>&nbsp;
     </td>
 </tr>
 <tr></tr>
@@ -72,7 +79,12 @@ font-size:12px;
 
     <div class="padding">
         <div class="flex1" style="height: 490px;overflow-y:auto;">
-
+            <i>Use this menu to override the production of individual components. Click (+)
+            button to always produce the component, (-) button to never produce, (o)
+                button to stop overriding. Production of the components will be assigned
+                to the managers <u>who are not in any team.</u> </i>
+            <br>
+            <br>
             <table>
                 <tr>
                     <td></td>
@@ -83,17 +95,17 @@ font-size:12px;
                 <tr ng-repeat="component in mmmodCtrl.componentList('Component')">
                     <td><img uib-tooltip="{{ component.name }}" tooltip-append-to-body="true" ng-src="{{ component.icon }}"></td>
                     <td>{{ component.inventory }}</td>
-                    <td>( {{ component.researched }} / {{ component.totalDevsPossible }} )&nbsp;
-                        <button ng-If="component.researched < component.totalDevsPossible" class="small" uib-tooltip="Research"
-                                tooltip-append-to-body="true" ng-click="mmmodCtrl.researchComponent(component.name);"><i class="fa fa-flask"></i></button>
+                    <td>
                     </td>
                     <!--
                     <td>Volume here</td>
                     -->
                     <td>{{ component.working }}&nbsp;
-                        <button class="small" ng-if="component.researched > component.working && mmmodCtrl.isMaxProdComponent(component.name) == false" uib-tooltip="Start working"
+                        <button class="small" ng-disabled="component.researched && mmmodCtrl.isMaxProdComponent(component.name) == 2" uib-tooltip="Always produce"
                                 tooltip-append-to-body="true" ng-click="mmmodCtrl.maxProduction(component.name)"><i class="fa fa-plus"></i></button>&nbsp;
-                        <button class="small red" ng-if="component.working <= component.researched && mmmodCtrl.isMaxProdComponent(component.name) == true" uib-tooltip="Stop working"
+                        <button class="small blue" ng-disabled="component.researched && mmmodCtrl.isMaxProdComponent(component.name) == 1" uib-tooltip="No override"
+                                tooltip-append-to-body="true" ng-click="mmmodCtrl.stopOverride(component.name)"><i class="fa fa-circle"></i></button>&nbsp;
+                        <button class="small red" ng-disabled="component.researched && mmmodCtrl.isMaxProdComponent(component.name) == 0" uib-tooltip="Never produce"
                                 tooltip-append-to-body="true" ng-click="mmmodCtrl.minProduction(component.name)"><i class="fa fa-minus"></i></button>&nbsp;
                     </td>
                 </tr>
@@ -113,15 +125,17 @@ font-size:12px;
             <table ng-if="mmmodCtrl.teams.length > 0">
                 <tr>
                     <td><b>Team Name</b></td>
-                    <td><b>Manager Count</b></td>
+                    <td align="center"><b>Manager Count</b></td>
+                    <td align="center"><b>Assigned Features</b></td>
                     <td><b>Status</b></td>
                     <td><b>Edit/Delete</b></td>
                 </tr>
                 <tr ng-repeat="team in mmmodCtrl.teams">
                     <td>{{ team.teamName }}</td>
-                    <td>{{ team.members.length }} &nbsp;</td>
+                    <td align="center">{{ team.members.length }} &nbsp;</td>
+                    <td align="center">{{ team.assignedFeatures.length }}</td>
                     <td ng-if="team.status == 0"> Idle&nbsp;</td>
-                    <td ng-if="team.status == 1"> Working&nbsp;</td>
+                    <td ng-if="team.status != 0"> Working&nbsp;</td>
                     <td>
                         <button class="small" uib-tooltip="Edit team"
                                 tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'edit_team'; mmmodCtrl.selectedTeam = team"><i class="fa fa-edit"></i></button>&nbsp;
@@ -153,6 +167,9 @@ font-size:12px;
 
     <div class="padding">
         <div class="flex1" style="height: 490px;overflow-y:auto;">
+            <i>Make sure to give a name to the team and select at least one manager.</i>
+            <br>
+            <br>
             <div style="float: right" >
                 <button class="small red" uib-tooltip="Go back to teams"
                         tooltip-append-to-body="true" ng-click="mmmodCtrl.tab = 'teams'">Back</button>&nbsp;
@@ -161,11 +178,11 @@ font-size:12px;
             Team Name: <input type="text" maxlength="20" ng-model="mmmodCtrl.tempTeamName" size="2" style="width: 300px" >
             <br>
             <br>
-            Number of developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "Developer") }}
+            Number of Developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "Developer") }}
             <br>
-            Number of lead developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "LeadDeveloper") }}
+            Number of Lead Developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "LeadDeveloper") }}
             <br>
-            Number of designers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "Designer") }}
+            Number of Designers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedManagers, "Designer") }}
             <br>
             <br>
             <b>Available Managers:</b>
@@ -174,9 +191,9 @@ font-size:12px;
             <table>
                 <tr>
                     <td><b>Manager Name</b></td>
-                    <td><b>Developers</b></td>
-                    <td><b>Lead Developers</b></td>
-                    <td><b>Designers</b></td>
+                    <td><b>Number of Developers</b></td>
+                    <td><b>Number of Lead Developers</b></td>
+                    <td><b>Number of Designers</b></td>
                     <td><b>Assign</b></td>
                 </tr>
                 <tr ng-repeat="manager in mmmodCtrl.getAllManagers()" ng-if="mmmodCtrl.getManagerEmployeeCount(manager) > 0 && !mmmodCtrl.isManagerInATeam(manager)">
@@ -200,6 +217,7 @@ font-size:12px;
             </div>
 
             <button class="medium" uib-tooltip="Create"
+                    ng-disabled="((mmmodCtrl.tempTeamName.length < 1) || (mmmodCtrl.selectedManagers.length < 1))"
                     tooltip-append-to-body="true" ng-click="mmmodCtrl.addTeam()">Create
             </button>
 
@@ -221,11 +239,11 @@ font-size:12px;
                               ng-change="mmmodCtrl.updateAssignedFeaturesWithEditedTeamName()" size="2" style="width: 300px" >
             <br>
             <br>
-            Number of developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Developer") }}
+            Number of Developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Developer") }}
             <br>
-            Number of lead developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "LeadDeveloper") }}
+            Number of Lead Developers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "LeadDeveloper") }}
             <br>
-            Number of designers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Designer") }}
+            Number of Designers: {{ mmmodCtrl.getNumberOfEmployeesInTeamByType(mmmodCtrl.selectedTeam.members, "Designer") }}
             <br>
             <br>
             <b>Current Managers:</b>
