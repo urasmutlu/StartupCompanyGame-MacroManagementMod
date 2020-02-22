@@ -225,13 +225,13 @@ exports.initialize = (modPath) => {
 
                 this.getEmployeeById = function (id) {
 
-                    var Employees = $rootScope.Helpers.GetAllEmployees();
+                    var Employees = Helpers.GetAllEmployees();
                     return Employees[Employees.findIndex(x => x.id === id)]
 
                 };
 
                 this.getAllEmployees = function () {
-                    return $rootScope.Helpers.GetAllEmployees();
+                    return Helpers.GetAllEmployees();
                 };
 
                 this.getEmployeesByType = function (employeeTypeName) {
@@ -283,7 +283,7 @@ exports.initialize = (modPath) => {
 
                     var obj = {researched: 0, working: 0, totalDevsPossible: 0, possibleResearches: []};
 
-                    var Employees = GetRootScope().Helpers.GetAllEmployees();
+                    var Employees = Helpers.GetAllEmployees();
 
                     var requiredPosition;
 
@@ -339,7 +339,7 @@ exports.initialize = (modPath) => {
 
                 this.getEmployeesByResearchedComponent = function (component) {
                     var array = [];
-                    var Employees = $rootScope.Helpers.GetAllEmployees();
+                    var Employees = Helpers.GetAllEmployees();
 
                     for (var i = 0; i < Employees.length; i++) {
                         var Employee = Employees[i];
@@ -371,7 +371,7 @@ exports.initialize = (modPath) => {
                         var Employee = this.getEmployeeById(EmployeesByComponent[0]);
 
                         var compObj = this.getComponentByName(component);
-                        var researchPrice = $rootScope.Helpers.GetResearchPrice(compObj);
+                        var researchPrice = Helpers.GetResearchPrice(compObj);
 
                         // Check if Employee has the required level.
                         if (this.orderLevel(Employee.level) >= this.orderLevel(compObj.employeeLevel)) {
@@ -399,7 +399,7 @@ exports.initialize = (modPath) => {
                         let allComponentNames = this.getManagerEmployeesAvailableComponents(managers[i]);
 
                         if (allComponentNames.includes(componentName)) {
-                            managers[i].production[componentName] = 9999;
+                            this.setManagerProduction(managers[i], componentName, 9999);
                             this.maxProdComponents[componentName] = 2;
                             $rootScope.settings.MacroManagementMod["maxProdComponents"] = this.maxProdComponents
                         }
@@ -426,7 +426,7 @@ exports.initialize = (modPath) => {
                         let allComponentNames = this.getManagerEmployeesAvailableComponents(managers[i]);
 
                         if (allComponentNames.includes(componentName)) {
-                            managers[i].production[componentName] = 0;
+                            this.setManagerProduction(managers[i], componentName, 0);
                             this.maxProdComponents[componentName] = 0;
                             $rootScope.settings.MacroManagementMod["maxProdComponents"] = this.maxProdComponents
                         }
@@ -446,7 +446,7 @@ exports.initialize = (modPath) => {
 
                         for (var j = 0; j < intersection.length; j++){
                             if(this.maxProdComponents[intersection[j]] !== 2)
-                                managers[i].production[intersection[j]] = 0;
+                                this.setManagerProduction(managers[i], intersection[j], 0);
                         }
                     }
                 };
@@ -463,7 +463,7 @@ exports.initialize = (modPath) => {
                         let intersection = allComponentNames.filter(x => componentNames.includes(x)).filter(onlyUnique);
                         for (var j = 0; j < intersection.length; j++){
                             if(this.maxProdComponents[intersection[j]] !== 0)
-                                managers[i].production[intersection[j]] = 9999;
+                                this.setManagerProduction(managers[i], intersection[j], 9999);
                         }
                     }
                 };
@@ -477,7 +477,7 @@ exports.initialize = (modPath) => {
 
                         for (var j = 0; j < allComponentNames.length; j++){
                             if(this.maxProdComponents[allComponentNames[j]] !== 2)
-                                managers[i].production[allComponentNames[j]] = 0;
+                                this.setManagerProduction(managers[i], allComponentNames[j], 0);
                         }
                     }
                 };
@@ -494,6 +494,33 @@ exports.initialize = (modPath) => {
                         }
                     }
                     return requirementNames.filter(onlyUnique);
+                };
+
+                this.setManagerProduction = function(manager, componentName, value) {
+                    if (manager.planId === null || manager.planId === undefined) {
+                        this.createAndAssignNewPlan(manager);
+                    }
+
+                    var plan = GetRootScope().settings.productionPlans.find(t => t.id == manager.planId);
+                    if (plan.name !== this.getPlanName(manager)) {
+                        this.createAndAssignNewPlan(manager);
+                    }
+
+                    plan.production[componentName] = value;
+                };
+
+                this.createAndAssignNewPlan = function(manager) {
+                    var plan = {
+                        id: chance.guid(),
+                        name: this.getPlanName(manager),
+                        production: {}
+                    };
+                    GetRootScope().settings.productionPlans.push(plan);
+                    manager.planId = plan.id;
+                };
+
+                this.getPlanName = function(manager) {
+                    return manager.name + "'s Plan";
                 };
 
                 this.maxFeature = function(product, feature, featureIndex){
